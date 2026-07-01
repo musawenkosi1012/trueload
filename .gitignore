@@ -1,0 +1,15 @@
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+.playwright-mcp/
+*.log
+dist/
+build/
+.next/
+.claude/
+*.pem
+*.key
