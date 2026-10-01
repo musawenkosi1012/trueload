@@ -17,3 +17,6 @@ build/
 # Runtime state & build artifacts
 truelode/backend/instance/
 *.tsbuildinfo
+
+# Competition materials live in the private minetech2026-apply repo
+minetech2026-apply/
