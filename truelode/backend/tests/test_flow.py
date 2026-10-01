@@ -20,9 +20,12 @@ def client(app):
 @pytest.fixture()
 def world(app):
     mine = Account(name="Mine", primary_role=OrgType.MINE)
+    trans = Account(name="Trans", primary_role=OrgType.TRANSPORTER)
     proc = Account(name="Proc", primary_role=OrgType.PROCESSOR)
     lab = Account(name="Lab", primary_role=OrgType.LAB)
-    db.session.add_all([mine, proc, lab])
+    buyer = Account(name="Buyer", primary_role=OrgType.BUYER)
+    reg = Account(name="Reg", primary_role=OrgType.REGULATOR)
+    db.session.add_all([mine, trans, proc, lab, buyer, reg])
     db.session.flush()
     # Fund wallets so the per-batch PAYG gate passes during the test.
     for acct in (mine, proc, lab):
@@ -34,14 +37,16 @@ def world(app):
     route = Route(name="R", origin_site_id=msite.id, dest_site_id=psite.id,
                   path=CORRIDOR, buffer_m=2000)
     db.session.add(route)
-    for acct, role in [(mine, OrgType.MINE), (proc, OrgType.PROCESSOR),
-                       (lab, OrgType.LAB)]:
+    for acct, role in [(mine, OrgType.MINE), (trans, OrgType.TRANSPORTER),
+                       (proc, OrgType.PROCESSOR), (lab, OrgType.LAB),
+                       (buyer, OrgType.BUYER), (reg, OrgType.REGULATOR)]:
         u = User(email=f"{role}@t.test".lower(), name=role, role=role,
                  account_id=acct.id, is_account_owner=True)
         u.set_password("pw")
         db.session.add(u)
     db.session.commit()
-    return {"mine_site": msite.id, "plant_site": psite.id, "route": route.id}
+    return {"mine_site": msite.id, "plant_site": psite.id, "route": route.id,
+            "proc_org": proc.id, "buyer_org": buyer.id}
 
 
 def _token(client, role):
@@ -52,7 +57,10 @@ def _token(client, role):
 
 def test_full_chain(client, world):
     mine_h = _token(client, OrgType.MINE)
+    trans_h = _token(client, OrgType.TRANSPORTER)
     proc_h = _token(client, OrgType.PROCESSOR)
+    buyer_h = _token(client, OrgType.BUYER)
+    reg_h = _token(client, OrgType.REGULATOR)
 
     # 1. Birth a batch (30 t raw ore).
     r = client.post("/api/loadtickets", headers=mine_h, json={
@@ -61,24 +69,54 @@ def test_full_chain(client, world):
     assert r.status_code == 201
     body = r.get_json()
     batch_id, trip_id = body["batch"]["id"], body["trip"]["id"]
+    # Batch lookups accept the human TL- code as well as the internal id.
+    assert client.get(f"/api/batches/{body['batch']['code']}",
+                      headers=mine_h).status_code == 200
 
-    # 2. Off-route GPS ping -> flag.
-    r = client.post("/api/gps/bulk", headers=mine_h, json={
-        "trip_id": trip_id, "pings": [{"lat": -18.90, "lng": 32.6, "speed": 40}]})
+    # 2. Off-route GPS ping -> flag. Pings are org-bound: the custodian (mine)
+    #    may post, a bystander haulier may not.
+    ping = {"trip_id": trip_id, "pings": [{"lat": -18.90, "lng": 32.6, "speed": 40}]}
+    r = client.post("/api/gps/bulk", headers=trans_h, json=ping)
+    assert r.status_code == 403
+    r = client.post("/api/gps/bulk", headers=mine_h, json=ping)
     assert any(f["type"] == "OFF_ROUTE" for f in r.get_json()["flags"])
 
-    # 3. Weight mismatch on arrival (34 t -> top-up) -> reconcile fails.
+    # 3. Mine offers custody to the plant; processor scans the batch QR to accept.
+    r = client.post(f"/api/batches/{batch_id}/transfer", headers=mine_h,
+                    json={"to_org_id": world["proc_org"]})
+    assert r.status_code == 201
+    handover_id = r.get_json()["id"]
+    r = client.post(f"/api/handovers/{handover_id}/accept", headers=proc_h,
+                    json={"qr_token": body["batch"]["qr_token"]})
+    assert r.status_code == 200
+
+    # 4. Weight mismatch on arrival (34 t -> top-up) -> reconcile fails.
     r = client.post("/api/weighevents", headers=proc_h, json={
-        "batch_id": batch_id, "kind": WeighKind.PLANT_IN, "net_kg": 34000})
+        "batch_id": body["batch"]["code"], "kind": WeighKind.PLANT_IN,
+        "net_kg": 34000})
     assert r.get_json()["reconcile"]["ok"] is False
 
-    # 4. Processing: 8 t concentrate basis -> 1 t product (use clean child).
+    # 4b. The flagged party cannot clear its own anomaly; only the regulator
+    #     can, and only with a written justification (kept on the ledger).
+    flags = client.get("/api/flags", headers=reg_h).get_json()
+    mismatch = next(f for f in flags
+                    if f["type"] == "WEIGHT_MISMATCH" and f["status"] == "OPEN")
+    r = client.post(f"/api/flags/{mismatch['id']}/clear", headers=proc_h,
+                    json={"note": "trust me"})
+    assert r.status_code == 403
+    r = client.post(f"/api/flags/{mismatch['id']}/clear", headers=reg_h, json={})
+    assert r.status_code == 400
+    r = client.post(f"/api/flags/{mismatch['id']}/clear", headers=reg_h,
+                    json={"note": "re-weigh confirmed 30 t"})
+    assert r.status_code == 200
+
+    # 5. Processing: 8 t concentrate basis -> 1 t product (use clean child).
     r = client.post("/api/processing-steps", headers=proc_h, json={
         "parent_ids": [batch_id], "out_stage": "PRODUCT", "out_kg": 4000,
         "out_grade": 11.0, "unit_count": 20, "unit_label": "drums", "tol_pct": 50})
     child_id = r.get_json()["child"]["id"]
 
-    # 5. Issue passport + public verify.
+    # 6. Issue passport + public verify.
     r = client.post(f"/api/passport/{child_id}", headers=proc_h)
     token = r.get_json()["qr_token"]
     r = client.get(f"/api/verify/{token}")
@@ -87,8 +125,19 @@ def test_full_chain(client, world):
     assert data["ledger_intact"] is True
     assert data["passport"]["snapshot"]["final_batch"]["unit_count"] == 20
 
-    # 6. Handover by QR scan: resolve the scanned token back to the batch.
+    # 7. Handover by QR scan: resolve the scanned token back to the batch.
     r = client.get(f"/api/batches/resolve/{token}", headers=proc_h)
     assert r.status_code == 200
     assert r.get_json()["id"] == child_id
     assert client.get("/api/batches/resolve/bogus", headers=proc_h).status_code == 404
+
+    # 8. Buyer takes custody only by presenting the passport QR token.
+    r = client.post(f"/api/batches/{child_id}/claim", headers=buyer_h, json={})
+    assert r.status_code == 400
+    r = client.post(f"/api/batches/{child_id}/claim", headers=buyer_h,
+                    json={"qr_token": "forged"})
+    assert r.status_code == 400
+    r = client.post(f"/api/batches/{child_id}/claim", headers=buyer_h,
+                    json={"qr_token": token})
+    assert r.status_code == 200
+    assert r.get_json()["custodian"] == world["buyer_org"]

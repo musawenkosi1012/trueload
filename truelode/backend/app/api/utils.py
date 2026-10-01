@@ -6,7 +6,14 @@ from flask_jwt_extended import get_jwt, jwt_required, verify_jwt_in_request
 
 from app.extensions import db
 from app.models.account import Account
+from app.models.batch import Batch
 from app.models.user import User
+
+
+def find_batch(id_or_code: str) -> Batch | None:
+    """Resolve either the internal id or the human-readable TL- code."""
+    return (db.session.get(Batch, id_or_code)
+            or Batch.query.filter_by(code=id_or_code).first())
 
 
 def current_user() -> User | None:

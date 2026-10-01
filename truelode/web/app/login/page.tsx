@@ -31,11 +31,11 @@ export default function Login() {
       <p className="muted">Chain of custody for clean Zimbabwean lithium.</p>
       <form className="card" onSubmit={submit}>
         <label>Email</label>
-        <input value={email} onChange={(e) => setEmail(e.target.value)} style={{ width: "100%" }} />
+        <input data-demo="email" value={email} onChange={(e) => setEmail(e.target.value)} style={{ width: "100%" }} />
         <label>Password</label>
-        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={{ width: "100%" }} />
+        <input data-demo="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={{ width: "100%" }} />
         {err && <p style={{ color: "var(--red)" }}>{err}</p>}
-        <button style={{ marginTop: 14, width: "100%" }}>Sign in</button>
+        <button data-demo="signin" style={{ marginTop: 14, width: "100%" }}>Sign in</button>
       </form>
       <p className="muted" style={{ textAlign: "center", marginTop: 12 }}>
         No account?{" "}
@@ -47,7 +47,7 @@ export default function Login() {
         <div className="muted">Demo logins (password: <b>password</b>)</div>
         <div className="row" style={{ marginTop: 8 }}>
           {DEMO.map((r) => (
-            <button key={r} className="ghost"
+            <button key={r} data-demo={`chip-${r.toLowerCase()}`} className="ghost"
               onClick={() => setEmail(`${r.toLowerCase()}@truelode.test`)}>{r}</button>
           ))}
         </div>

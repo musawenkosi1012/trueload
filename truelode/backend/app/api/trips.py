@@ -3,9 +3,11 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt
 
 from app.extensions import db
+from app.models.batch import Batch
 from app.models.custody import Trip
 from app.models.enums import FlagType
 from app.models.flag import Flag
+from app.models.fleet import Vehicle
 from app.models.route import Route
 from app.models.site import Site
 from app.models.weigh import GpsPing
@@ -41,6 +43,16 @@ def ingest_gps():
     trip = db.session.get(Trip, d["trip_id"])
     if not trip:
         return jsonify({"error": "trip not found"}), 404
+    # Only the custodian (or the haulier assigned to the trip's vehicle) may
+    # author pings — otherwise any transporter account could forge any track.
+    claims = get_jwt()
+    batch = db.session.get(Batch, trip.batch_id)
+    vehicle = db.session.get(Vehicle, trip.vehicle_id) if trip.vehicle_id else None
+    allowed_orgs = {batch.current_custodian_org_id if batch else None,
+                    vehicle.transporter_id if vehicle else None}
+    if claims.get("account_id") not in allowed_orgs:
+        return jsonify({"error": "only the current custodian or the assigned "
+                                 "haulier can post pings for this trip"}), 403
     route = db.session.get(Route, trip.route_id) if trip.route_id else None
     sites = [(s.lat, s.lng) for s in Site.query.all()]
     flags = []

@@ -32,7 +32,9 @@ export default function BuyerPage() {
 
   async function claim(id: string) {
     setMsg("");
-    try { await post(`/api/batches/${id}/claim`, {}); setMsg("Custody claimed — recorded on the ledger."); load(); }
+    const qr = window.prompt("Scan or paste the passport QR token on the goods to claim custody:");
+    if (!qr) return;
+    try { await post(`/api/batches/${id}/claim`, { qr_token: qr.trim() }); setMsg("Custody claimed — recorded on the ledger."); load(); }
     catch (e: any) { setMsg(e.message); }
   }
 

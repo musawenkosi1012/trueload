@@ -10,7 +10,7 @@ from app.models.passport import Passport
 from app.services import ledger, signing
 from app.services.passport import issue
 
-from .utils import role_required
+from .utils import find_batch, role_required
 
 bp = Blueprint("passport", __name__, url_prefix="/api")
 
@@ -18,10 +18,11 @@ bp = Blueprint("passport", __name__, url_prefix="/api")
 @bp.post("/passport/<batch_id>")
 @role_required("PROCESSOR")
 def issue_passport(batch_id):
-    if not db.session.get(Batch, batch_id):
+    batch = find_batch(batch_id)
+    if not batch:
         return jsonify({"error": "batch not found"}), 404
-    passport = issue(batch_id, issued_by=get_jwt().get("sub"))
-    ledger.append("PASSPORT_ISSUED", {"batch_id": batch_id,
+    passport = issue(batch.id, issued_by=get_jwt().get("sub"))
+    ledger.append("PASSPORT_ISSUED", {"batch_id": batch.id,
                                       "qr_token": passport.qr_token},
                   actor_id=get_jwt().get("sub"))
     db.session.commit()

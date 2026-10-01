@@ -1,5 +1,7 @@
 "use client";
 
+import { fmtDateTime } from "@/lib/fmt";
+
 type IssuerInfo = { name: string; org?: string | null };
 
 export default function Issuer({
@@ -9,7 +11,7 @@ export default function Issuer({
   readonly issuedAt?: string;
 }) {
   if (!issuer && !issuedAt) return null;
-  const when = issuedAt ? new Date(issuedAt).toLocaleString() : "—";
+  const when = fmtDateTime(issuedAt);
   return (
     <div className="card">
       <h3>Issued by</h3>

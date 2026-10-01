@@ -12,7 +12,7 @@ from app.models.weigh import WeighEvent
 from app.services import ledger, massbalance
 from app.services.realtime import emit_event
 
-from .utils import role_required
+from .utils import find_batch, role_required
 
 bp = Blueprint("weigh", __name__, url_prefix="/api/weighevents")
 
@@ -22,7 +22,7 @@ bp = Blueprint("weigh", __name__, url_prefix="/api/weighevents")
 def record_weigh():
     d = request.get_json() or {}
     claims = get_jwt()
-    batch = db.session.get(Batch, d["batch_id"])
+    batch = find_batch(d["batch_id"])
     if not batch:
         return jsonify({"error": "batch not found"}), 404
 

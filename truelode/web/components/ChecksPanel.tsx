@@ -1,7 +1,9 @@
 "use client";
 
+import { fmtDateTime } from "@/lib/fmt";
+
 type Recon = { ok: boolean };
-type Trip = { deviations_total: number; deviations_cleared: number };
+type Trip = { deviations_total: number; deviations_cleared: number; pings: number };
 
 function Row({ label, ok }: { readonly label: string; readonly ok: boolean | null }) {
   const cls = ok === null ? "muted" : ok ? "badge green" : "badge red";
@@ -23,8 +25,11 @@ export default function ChecksPanel({
   readonly transport?: Trip[];
 }) {
   const massOk = reconciliations?.length ? reconciliations.every((r) => r.ok) : null;
-  const routeOk = transport?.length
-    ? transport.every((t) => t.deviations_total - t.deviations_cleared === 0)
+  // A leg with no GPS pings was not monitored — never report a vacuous pass.
+  const monitored = transport?.some((t) => t.pings > 0);
+  const routeOk = monitored
+    ? transport!.every((t) => t.pings === 0 ||
+        t.deviations_total - t.deviations_cleared === 0)
     : null;
   return (
     <div className="card">
@@ -34,7 +39,7 @@ export default function ChecksPanel({
       <Row label="Mass balance (weight in vs out)" ok={massOk} />
       <Row label="Route / geofence" ok={routeOk} />
       <div className="muted" style={{ marginTop: 8 }}>
-        Verified {new Date().toLocaleString()}
+        Verified {fmtDateTime(new Date().toISOString())}
       </div>
     </div>
   );

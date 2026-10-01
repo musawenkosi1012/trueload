@@ -8,7 +8,7 @@ from app.services import ledger
 from app.services.passport import _lineage
 from app.services.realtime import emit_event
 
-from .utils import err, role_required
+from .utils import err, find_batch, role_required
 
 bp = Blueprint("batches", __name__, url_prefix="/api/batches")
 
@@ -36,7 +36,7 @@ def resolve_qr(qr_token):
 @bp.get("/<batch_id>")
 @role_required()
 def get_batch(batch_id):
-    batch = db.session.get(Batch, batch_id)
+    batch = find_batch(batch_id)
     return (jsonify(batch.to_dict()) if batch
             else (jsonify({"error": "not found"}), 404))
 
@@ -50,10 +50,15 @@ def lineage(batch_id):
 @bp.post("/<batch_id>/claim")
 @role_required("BUYER")
 def claim(batch_id):
-    """Buyer takes custody of a product batch — records the transfer on the chain."""
-    batch = db.session.get(Batch, batch_id)
+    """Buyer takes custody of a product batch — records the transfer on the chain.
+    Requires the batch's passport QR token: digital claim follows physical
+    possession of the scanned goods."""
+    batch = find_batch(batch_id)
     if not batch:
         return err("batch not found", 404)
+    d = request.get_json() or {}
+    if (d.get("qr_token") or "").strip() != batch.qr_token:
+        return err("scan the batch QR to claim custody — token does not match", 400)
     claims = get_jwt()
     batch.current_custodian_org_id = claims.get("account_id")
     ledger.append("BATCH_CLAIMED", {"batch_code": batch.code,

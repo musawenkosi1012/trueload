@@ -1,5 +1,7 @@
 "use client";
 
+import { fmtDateTime } from "@/lib/fmt";
+
 type HandoverLink = { from_org?: string | null; to_org?: string | null; accepted_at?: string | null; vehicle_id?: string | null };
 type CustodyData = {
   mine?: string | null; transporter?: string | null; processor?: string | null;
@@ -37,7 +39,7 @@ export default function Custody({ custody }: { readonly custody?: CustodyData })
               <tr key={i}>
                 <td className="muted">{h.from_org ?? "—"}</td>
                 <td className="muted">{h.to_org ?? "—"}</td>
-                <td className="muted">{h.accepted_at ? new Date(h.accepted_at).toLocaleString() : "—"}</td>
+                <td className="muted">{fmtDateTime(h.accepted_at)}</td>
               </tr>
             ))}
           </tbody>

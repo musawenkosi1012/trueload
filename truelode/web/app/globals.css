@@ -252,3 +252,9 @@ th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--lin
   .muted { color: #333; }
   .nav { display: none !important; }
 }
+
+/* Disabled controls must look disabled — judges click dead buttons otherwise. */
+button:disabled, input:disabled, select:disabled, textarea:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

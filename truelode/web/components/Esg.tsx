@@ -16,8 +16,10 @@ export default function Esg({ esg }: { readonly esg?: Esg }) {
     <div className="card">
       <h3>ESG & composition {esg.estimate && <span className="badge amber">estimate</span>}</h3>
       <div className="muted">
-        Carbon: <b style={{ color: "var(--text)" }}>≈ {t(esg.carbon_kg_co2e)} t CO₂e</b>{" "}
-        ({esg.carbon_kg_per_tonne} kg/t · processing {t(esg.processing_kg)} t · transport {t(esg.transport_kg)} t)
+        Carbon (indicative estimate, not audited LCA):{" "}
+        <b style={{ color: "var(--text)" }}>≈ {t(esg.carbon_kg_co2e)} t CO₂e</b>{" "}
+        (≈ {Math.round(esg.carbon_kg_per_tonne).toLocaleString()} kg CO₂e per tonne of
+        product · processing {t(esg.processing_kg)} t CO₂e · transport {t(esg.transport_kg)} t CO₂e)
       </div>
       {c && (
         <div className="muted">

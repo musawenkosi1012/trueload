@@ -19,6 +19,7 @@ export default function Transport({ rows }: { readonly rows?: TripRow[] }) {
           <tbody>
             {rows.map((r, i) => {
               const open = r.deviations_total - r.deviations_cleared;
+              const unmonitored = r.pings === 0;
               return (
                 <tr key={i}>
                   <td><b>{r.batch_code}</b></td>
@@ -26,9 +27,13 @@ export default function Transport({ rows }: { readonly rows?: TripRow[] }) {
                   <td>{Math.round(r.distance_km)} km</td>
                   <td>{r.pings}</td>
                   <td>
-                    <span className={`badge ${open > 0 ? "amber" : "green"}`}>
-                      {r.deviations_cleared}/{r.deviations_total} cleared
-                    </span>
+                    {unmonitored ? (
+                      <span className="badge amber">no telemetry — unverified</span>
+                    ) : (
+                      <span className={`badge ${open > 0 ? "amber" : "green"}`}>
+                        {r.deviations_cleared}/{r.deviations_total} cleared
+                      </span>
+                    )}
                   </td>
                 </tr>
               );

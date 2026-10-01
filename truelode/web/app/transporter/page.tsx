@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 
 import FlagsPanel from "@/components/FlagsPanel";
+import HandoverOffer from "@/components/HandoverOffer";
 import PendingHandovers from "@/components/PendingHandovers";
 import Shell from "@/components/Shell";
 import PageHeader from "@/components/shell/PageHeader";
@@ -13,6 +14,7 @@ import { getSocket } from "@/lib/socket";
 export default function TransporterPage() {
   const [trips, setTrips] = useState<any[]>([]);
   const [routes, setRoutes] = useState<any[]>([]);
+  const [orgs, setOrgs] = useState<any[]>([]);
   const [codes, setCodes] = useState<Record<string, string>>({});
   const [tripId, setTripId] = useState("");
   const [track, setTrack] = useState<any[]>([]);
@@ -31,6 +33,7 @@ export default function TransporterPage() {
   useEffect(() => {
     loadTrips();
     get("/api/routes").then(setRoutes);
+    get("/api/accounts").then(setOrgs).catch(() => {});
     get("/api/batches").then((bs: any[]) =>
       setCodes(Object.fromEntries(bs.map((b) => [b.id, b.code]))));
     const s = getSocket();
@@ -88,9 +91,9 @@ export default function TransporterPage() {
             <input type="number" min={0} style={{ width: 90 }} value={speed}
               onChange={(e) => setSpeed(+e.target.value)} />
           </div>
-          <button disabled={!ready || busy} onClick={() => sendPing(base()[0], base()[1], speed)}>On-route ping</button>
-          <button className="ghost" disabled={!ready || busy} onClick={() => sendPing(base()[0], base()[1] + 1.5, speed)}>Off-route ping</button>
-          <button className="ghost" disabled={!ready || busy} onClick={() => sendPing(base()[0], base()[1], 0)}>Stop ping</button>
+          <button data-demo="ping-on" disabled={!ready || busy} onClick={() => sendPing(base()[0], base()[1], speed)}>On-route ping</button>
+          <button data-demo="ping-off" className="ghost" disabled={!ready || busy} onClick={() => sendPing(base()[0], base()[1] + 1.5, speed)}>Off-route ping</button>
+          <button data-demo="ping-stop" className="ghost" disabled={!ready || busy} onClick={() => sendPing(base()[0], base()[1], 0)}>Stop ping</button>
           <button className="ghost" disabled={!tripId || busy} onClick={useMyLocation}>Use my GPS</button>
         </div>
         {trip && (
@@ -106,6 +109,14 @@ export default function TransporterPage() {
         <TripMap corridor={corridor}
           track={track.map((p) => ({ lat: p.lat, lng: p.lng }))} />
       </div>
+      {trip && (
+        <div className="card" key={trip.batch_id}>
+          <HandoverOffer batchId={trip.batch_id} orgs={orgs} toRoles={["PROCESSOR"]}
+            prompt="At the plant gate? Hand the batch to the processor:"
+            selectLabel="Processor org"
+            doneText="Handover offered — the plant must scan the batch QR to accept custody." />
+        </div>
+      )}
       </>)}
       {tab === "alerts" && <FlagsPanel />}
       {tab === "trips" && <PendingHandovers role="TRANSPORTER" onAccepted={loadTrips} />}

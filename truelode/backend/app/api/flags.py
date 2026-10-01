@@ -23,13 +23,19 @@ def list_flags():
 
 
 @bp.post("/<flag_id>/clear")
-@role_required("REGULATOR", "PROCESSOR")
+@role_required("REGULATOR")
 def clear_flag(flag_id):
+    """Only the regulator may clear a flag — the flagged party cannot clear
+    its own anomaly. A written justification is mandatory and lands on the
+    ledger beside the original flag."""
     flag = db.session.get(Flag, flag_id)
     if not flag:
         return jsonify({"error": "not found"}), 404
+    note = ((request.get_json() or {}).get("note") or "").strip()
+    if not note:
+        return jsonify({"error": "a written justification is required to "
+                                 "clear a flag"}), 400
     flag.status = FlagStatus.CLEARED
-    note = (request.get_json() or {}).get("note", "")
     ledger.append("FLAG_CLEARED", {"flag_id": flag.id, "note": note},
                   actor_id=get_jwt().get("sub"))
     db.session.commit()

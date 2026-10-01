@@ -44,7 +44,7 @@ function AcceptForm({ handover, vehicles, drivers, onDone, onCancel }: {
       <div className="row">
         <div>
           <label>Batch QR token (scan or paste)</label>
-          <input type="text" value={qr} onChange={(e) => setQr(e.target.value)}
+          <input data-demo="qr-input" type="text" value={qr} onChange={(e) => setQr(e.target.value)}
             placeholder="Paste token or scan QR" required autoFocus />
         </div>
         {vehicles.length > 0 && (
@@ -75,7 +75,7 @@ function AcceptForm({ handover, vehicles, drivers, onDone, onCancel }: {
         </div>
       </div>
       <div style={{ display: "flex", gap: 8 }}>
-        <button type="submit" disabled={!qr || busy}>{busy ? "Accepting…" : "Confirm acceptance"}</button>
+        <button data-demo="confirm-accept" type="submit" disabled={!qr || busy}>{busy ? "Accepting…" : "Confirm acceptance"}</button>
         <button type="button" className="ghost" onClick={onCancel}>Cancel</button>
       </div>
       {err && <p style={{ color: "var(--red)" }}>{err}</p>}
@@ -172,7 +172,7 @@ export default function PendingHandovers({
             <span><b>{h.batch_id.slice(0, 8)}…</b></span>
             {h.eta && <span className="muted">ETA: {new Date(h.eta).toLocaleString()}</span>}
             {h.notes && <span className="muted">{h.notes}</span>}
-            <button onClick={() => setActive({ id: h.id, mode: "accept" })}
+            <button data-demo="accept-custody" onClick={() => setActive({ id: h.id, mode: "accept" })}
               disabled={!!active}>Accept custody</button>
             <button className="ghost" onClick={() => setActive({ id: h.id, mode: "reject" })}
               disabled={!!active} style={{ color: "var(--red)" }}>Reject</button>

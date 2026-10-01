@@ -65,8 +65,8 @@ export default function ProcessTools({
 
       <div className="row" style={{ marginTop: 10 }}>
         <div><label>Arrival weight (t)</label>
-          <input type="number" min={0.1} value={inKg} onChange={(e) => setInKg(+e.target.value)} /></div>
-        <button onClick={weighIn} disabled={!canWeighIn || inKg <= 0 || !!busy}>
+          <input data-demo="arrival" type="number" min={0.1} value={inKg} onChange={(e) => setInKg(+e.target.value)} /></div>
+        <button data-demo="weigh-in" onClick={weighIn} disabled={!canWeighIn || inKg <= 0 || !!busy}>
           {busy === "weigh" ? "…" : "Weigh in & reconcile"}</button>
         {batchId && !canWeighIn && <span className="hint">Weigh-in needs an IN_TRANSIT batch.</span>}
       </div>
@@ -82,7 +82,7 @@ export default function ProcessTools({
           <input type="number" min={0} max={100} value={out.grade} onChange={(e) => setOut({ ...out, grade: +e.target.value })} /></div>
         <div><label>Units</label>
           <input type="number" min={0} value={out.units} onChange={(e) => setOut({ ...out, units: +e.target.value })} /></div>
-        <button onClick={processStep} disabled={!canProcess || !outOk || !!busy}>
+        <button data-demo="process" onClick={processStep} disabled={!canProcess || !outOk || !!busy}>
           {busy === "process" ? "…" : "Process → child batch"}</button>
         {batchId && !canProcess && <span className="hint">Process needs a RECEIVED batch.</span>}
       </div>
@@ -95,7 +95,7 @@ export default function ProcessTools({
           {recon.ratio !== undefined && <span className="muted"> · ratio {recon.ratio}</span>}
         </p>
       )}
-      <button onClick={issue} disabled={!batchId || !!busy} style={{ marginTop: 8 }}>
+      <button data-demo="issue-passport" onClick={issue} disabled={!batchId || !!busy} style={{ marginTop: 8 }}>
         {busy === "issue" ? "…" : "Issue passport"}</button>
       {pass && <p style={{ color: "var(--green)" }}>Passport: <a href={`/verify/${pass.qr_token}`} target="_blank">/verify/{pass.qr_token.slice(0, 10)}…</a></p>}
       {err && <p style={{ color: "var(--red)" }}>{err}</p>}

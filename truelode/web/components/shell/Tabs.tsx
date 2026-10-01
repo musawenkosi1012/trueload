@@ -31,7 +31,7 @@ export default function Tabs({
   return (
     <div className="tabs" role="tablist">
       {tabs.map((t) => (
-        <button key={t.key} role="tab" aria-selected={t.key === tab}
+        <button key={t.key} role="tab" aria-selected={t.key === tab} data-demo={`tab-${t.key}`}
           className={`tab ${t.key === tab ? "active" : ""}`} onClick={() => onSelect(t.key)}>
           {t.label}
         </button>

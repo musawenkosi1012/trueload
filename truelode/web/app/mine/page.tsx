@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 
 import BatchTable from "@/components/BatchTable";
+import HandoverOffer from "@/components/HandoverOffer";
 import MintedBatch from "@/components/MintedBatch";
 import Shell from "@/components/Shell";
 import PageHeader from "@/components/shell/PageHeader";
@@ -9,54 +10,6 @@ import Tabs, { useTab } from "@/components/shell/Tabs";
 import StatGrid from "@/components/StatGrid";
 import { get, post } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-
-function HandoverOffer({ batch, orgs }: { readonly batch: any; readonly orgs: any[] }) {
-  const [toOrgId, setToOrgId] = useState("");
-  const [eta, setEta] = useState("");
-  const [notes, setNotes] = useState("");
-  const [done, setDone] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
-
-  const transporters = orgs.filter((o) => o.primary_role === "TRANSPORTER");
-
-  async function offer(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true); setErr("");
-    try {
-      await post(`/api/batches/${batch.id}/transfer`, { to_org_id: toOrgId, eta: eta || undefined, notes: notes || undefined });
-      setDone(true);
-    } catch (ex: any) { setErr(ex.message); }
-    finally { setBusy(false); }
-  }
-
-  if (done) return <p className="muted" style={{ marginTop: 8 }}>✓ Handover offered — transporter must scan QR to accept.</p>;
-
-  return (
-    <form onSubmit={offer} style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-      <p className="muted" style={{ marginBottom: 4 }}>Hand to transporter:</p>
-      <div className="row">
-        <div>
-          <label>Transporter org</label>
-          <select value={toOrgId} onChange={(e) => setToOrgId(e.target.value)} required>
-            <option value="">— select —</option>
-            {transporters.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-          </select>
-        </div>
-        <div>
-          <label>ETA (optional)</label>
-          <input type="datetime-local" value={eta} onChange={(e) => setEta(e.target.value)} />
-        </div>
-        <div>
-          <label>Notes</label>
-          <input type="text" value={notes} placeholder="optional" onChange={(e) => setNotes(e.target.value)} />
-        </div>
-        <button disabled={!toOrgId || busy}>{busy ? "Offering…" : "Offer handover"}</button>
-      </div>
-      {err && <p style={{ color: "var(--red)" }}>{err}</p>}
-    </form>
-  );
-}
 
 export default function MinePage() {
   const { user, refresh } = useAuth();
@@ -113,7 +66,10 @@ export default function MinePage() {
       <Tabs tab={tab} onSelect={setTab} tabs={[
         { key: "overview", label: "Overview" }, { key: "ticket", label: "Load ticket" },
         { key: "batches", label: "Batches" }]} />
-      {tab === "overview" && <StatGrid />}
+      {tab === "overview" && (<>
+        <StatGrid />
+        <BatchTable />
+      </>)}
       {tab === "ticket" && (<>
       <form className="card" onSubmit={createTicket}>
         <div className="row">
@@ -143,7 +99,7 @@ export default function MinePage() {
               onChange={(e) => setForm({ ...form, grade: +e.target.value })} />
             {!gradeOk && <div className="hint bad">Grade must be 0–100%</div>}
           </div>
-          <button disabled={!canSubmit}>{busy ? "Creating…" : "Weigh out & create batch"}</button>
+          <button data-demo="weigh-out" disabled={!canSubmit}>{busy ? "Creating…" : "Weigh out & create batch"}</button>
         </div>
         <p className="muted">
           Creating a batch debits a per-batch fee from your wallet
@@ -159,7 +115,9 @@ export default function MinePage() {
       {history.map((b) => (
         <div key={b.id}>
           <MintedBatch batch={b} />
-          <HandoverOffer batch={b} orgs={orgs} />
+          <HandoverOffer batchId={b.id} orgs={orgs} toRoles={["TRANSPORTER"]}
+            prompt="Hand to transporter:" selectLabel="Transporter org"
+            doneText="Handover offered — the transporter must scan the batch QR to accept." />
         </div>
       ))}
       </>)}

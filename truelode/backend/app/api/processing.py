@@ -10,7 +10,7 @@ from app.models.processing import ProcessingStep
 from app.services import ledger, massbalance
 from app.services.realtime import emit_event
 
-from .utils import role_required
+from .utils import find_batch, role_required
 
 bp = Blueprint("processing", __name__, url_prefix="/api/processing-steps")
 
@@ -25,7 +25,7 @@ YIELD_BANDS = {BatchStage.CONCENTRATE: (3.0, 12.0),
 def run_step():
     d = request.get_json() or {}
     claims = get_jwt()
-    parents = [db.session.get(Batch, pid) for pid in d["parent_ids"]]
+    parents = [find_batch(pid) for pid in d["parent_ids"]]
     parents = [p for p in parents if p]
     if not parents:
         return jsonify({"error": "no valid parents"}), 400

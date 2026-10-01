@@ -37,7 +37,7 @@ export default function BatchPicker({
     <div>
       <label>Batch id (click a batch row, type, or scan QR)</label>
       <div className="row">
-        <input value={batchId} onChange={(e) => setBatchId(e.target.value)}
+        <input data-demo="batch-id" value={batchId} onChange={(e) => setBatchId(e.target.value)}
           style={{ flex: 1, minWidth: 240 }} />
         <button className="ghost" onClick={() => { setMsg(""); setScanning(true); }}>
           📷 Scan QR

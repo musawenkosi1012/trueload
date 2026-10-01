@@ -29,7 +29,7 @@ export default function ProcessorPage() {
         </>
       )}
       {tab === "batches" && <BatchTable onSelect={(b) => { setBatchId(b.id); setTab("process"); }} />}
-      {tab === "alerts" && <FlagsPanel canClear />}
+      {tab === "alerts" && <FlagsPanel />}
     </Shell>
   );
 }
